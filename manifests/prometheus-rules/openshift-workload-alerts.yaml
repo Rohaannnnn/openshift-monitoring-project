@@ -1,0 +1,70 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: openshift-workload-alerts
+  labels:
+    app.kubernetes.io/name: openshift-monitoring-project
+    prometheus: user-workload
+spec:
+  groups:
+    - name: workload-health
+      rules:
+        - alert: WorkloadHighCPU
+          expr: sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{container!="",container!="POD",image!=""}[5m])) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage for {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "A workload has sustained CPU consumption above 0.8 cores for 10 minutes."
+            runbook: "docs/runbooks/high-cpu.md"
+
+        - alert: WorkloadHighMemory
+          expr: sum by (namespace, pod) (container_memory_working_set_bytes{container!="",container!="POD",image!=""}) > 1073741824
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage for {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "A workload is using more than 1 GiB of working-set memory for 10 minutes."
+            runbook: "docs/runbooks/high-memory.md"
+
+        - alert: PodCrashLooping
+          expr: max by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[15m])) >= 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Container repeatedly restarting in {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "The container restarted at least 3 times in the last 15 minutes."
+            runbook: "docs/runbooks/pod-crashloop.md"
+
+        - alert: PodNotReady
+          expr: max by (namespace, pod) (kube_pod_status_ready{condition="false"}) == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod is not ready: {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "The pod has remained not ready for 10 minutes."
+            runbook: "docs/runbooks/pod-not-ready.md"
+
+        - alert: NodeMemoryPressure
+          expr: max by (node) (kube_node_status_condition{condition="MemoryPressure",status="true"}) == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node memory pressure: {{ $labels.node }}"
+            description: "The node reports sustained MemoryPressure."
+            runbook: "docs/runbooks/node-issues.md"
+
+        - alert: NodeDiskPressure
+          expr: max by (node) (kube_node_status_condition{condition="DiskPressure",status="true"}) == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node disk pressure: {{ $labels.node }}"
+            description: "The node reports sustained DiskPressure."
+            runbook: "docs/runbooks/node-issues.md"
