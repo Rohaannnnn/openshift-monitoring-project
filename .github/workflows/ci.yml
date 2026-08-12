@@ -1,0 +1,36 @@
+name: Observability CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run automated tests
+        run: pytest -q
+
+      - name: Validate YAML manifests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in Path("cluster-config").rglob("*.yaml"):
+              yaml.safe_load(path.read_text())
+          for path in Path("manifests").rglob("*.yaml"):
+              yaml.safe_load(path.read_text())
+          print("All YAML manifests parsed successfully")
+          PY
