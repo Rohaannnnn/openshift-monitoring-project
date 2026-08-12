@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: app-alert-rules
+  namespace: custom-apps
+  labels:
+    role: alert-rules
+spec:
+  groups:
+  - name: ApplicationAlerts
+    rules:
+    - alert: HighMemoryUsage
+      expr: container_memory_working_set_bytes{container=""} / container_spec_memory_limit_bytes{container=""} * 100 > 85
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High Memory Usage on {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} memory usage is above 85% for 5 minutes."
+
+    - alert: PodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total[5m]) * 60 > 2
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} restarting frequently"
+        description: "Pod {{ $labels.pod }} is restarting more than 2 times in 5 minutes."
