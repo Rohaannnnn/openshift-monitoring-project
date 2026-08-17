@@ -1,0 +1,49 @@
+name: Observability CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Test and validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest PyYAML
+
+      - name: Run automated tests
+        run: python -m pytest -q
+
+      - name: Compile Python files
+        run: python -m compileall -q .
+
+      - name: Validate YAML manifests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          paths = list(Path("cluster-config").rglob("*.yaml"))
+          paths += list(Path("manifests").rglob("*.yaml"))
+
+          for path in paths:
+              with path.open(encoding="utf-8") as handle:
+                  yaml.safe_load(handle)
+
+          print(f"Validated {len(paths)} YAML manifest(s)")
+          PY
