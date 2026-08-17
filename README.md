@@ -1,125 +1,143 @@
 # OpenShift Observability & Incident Monitoring
 
-A practical OpenShift monitoring project built around **Prometheus, User Workload Monitoring, alerting, investigation, and operational runbooks**.
+[![Observability CI](https://github.com/Rohaannnnn/openshift-monitoring-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Rohaannnnn/openshift-monitoring-project/actions/workflows/ci.yml)
 
-The goal is not just to collect metrics. The project models the workflow an engineer follows during an incident:
+A hands-on OpenShift observability project focused on **Prometheus alerting, infrastructure monitoring, incident investigation, troubleshooting runbooks, automation, and CI validation**.
 
-**Problem → Monitoring signal → Alert → Investigation → Resolution → Verification**
-
-> This repository is designed as a reproducible observability/incident-monitoring project for an OpenShift lab or development cluster. It does not claim production incidents that were not actually observed.
+> **Project scope:** This repository is designed for an OpenShift lab/development environment. It does not claim production incidents or evidence that has not been captured from a real cluster.
 
 ## What this project demonstrates
 
 - OpenShift User Workload Monitoring configuration
-- PrometheusRule-based workload and node health alerts
+- PrometheusRule-based workload and node alerts
 - CPU and memory saturation detection
 - Pod crash/restart and readiness detection
-- Node memory/disk pressure signals
+- Node memory and disk pressure detection
 - `oc`-based incident investigation
 - Alert-specific troubleshooting runbooks
-- YAML validation and automated Python tests
-- GitHub Actions CI for every push and pull request
-- Architecture and evidence documentation
+- Automated Python tests for monitoring rules
+- YAML manifest validation
+- GitHub Actions CI on pushes and pull requests
+- Documentation structured around an incident-response workflow
 
-## Architecture
+## Incident workflow
+
+The project follows an operational workflow rather than treating monitoring as isolated YAML:
+
+**Problem → Monitoring Signal → Alert → Investigation → Resolution → Verification**
 
 ```mermaid
 flowchart LR
-    A[OpenShift Workloads] --> B[ServiceMonitor / PodMonitor]
-    A --> C[Kubernetes / Kubelet Metrics]
-    B --> D[Prometheus]
-    C --> D
-    D --> E[PrometheusRule]
-    E --> F[Alertmanager]
-    F --> G[Incident]
-    G --> H[Engineer Investigation]
-    H --> I[oc + logs + events + metrics]
-    I --> J[Resolution]
-    J --> K[Verification]
+    A[OpenShift Workload] --> B[Metrics]
+    B --> C[Prometheus]
+    C --> D[PrometheusRule]
+    D --> E[Alert]
+    E --> F[Investigation]
+    F --> G[Resolution]
+    G --> H[Verification]
+    H --> B
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) for the detailed signal flow.
+Detailed architecture is documented in [`docs/architecture.md`](docs/architecture.md).
 
 ## Repository structure
 
 ```text
 .
 ├── .github/workflows/
-│   └── ci.yml                         # Automated tests + YAML validation
+│   └── ci.yml                         # Automated tests and YAML validation
 ├── cluster-config/
-│   ├── user-workload-monitoring.yaml  # Enables UWM
-│   └── retention-config.yaml           # Retention/storage configuration
+│   ├── user-workload-monitoring.yaml  # Enables User Workload Monitoring
+│   └── retention-config.yaml           # Optional retention/storage settings
 ├── manifests/
-│   ├── service-monitors/               # ServiceMonitor definitions
-│   ├── pod-monitors/                   # PodMonitor definitions
-│   └── prometheus-rules/               # Alerting rules
+│   ├── pod-monitors/                  # PodMonitor examples
+│   ├── prometheus-rules/              # Prometheus alerting rules
+│   └── service-monitors/              # ServiceMonitor examples
 ├── docs/
-│   ├── architecture.md                 # Monitoring architecture
-│   ├── troubleshooting.md              # Incident investigation workflow
-│   ├── runbooks/                       # Alert-specific remediation guides
-│   └── screenshots/                    # Real cluster evidence captured by the operator
+│   ├── architecture.md                # Monitoring architecture
+│   ├── troubleshooting.md             # Investigation workflow
+│   ├── runbooks/                      # Alert-specific runbooks
+│   └── screenshots/                    # Real OpenShift evidence
 ├── tests/
-│   └── test_alert_rules.py             # Automated alert-rule validation
-├── logs/                               # Sanitized example logs/evidence
-├── main.py                             # Local host resource observation helper
-└── requirements-dev.txt                # Test dependencies
+│   └── test_alert_rules.py            # Automated alert validation
+├── scripts/                           # Linux monitoring helpers
+├── logs/                              # Existing lab log data
+├── main.py                            # Local resource observation helper
+└── requirements-dev.txt               # Test dependencies
 ```
 
-## Quickstart
+## Quick start
+
+### Prerequisites
+
+- Access to an OpenShift cluster
+- `oc` CLI configured for the target cluster
+- Permission to manage the required monitoring resources
+- Python 3.11+ for local validation
 
 ### 1. Enable User Workload Monitoring
+
+Review the configuration before applying it to a cluster:
 
 ```bash
 oc apply -f cluster-config/user-workload-monitoring.yaml
 ```
 
-Verify the monitoring stack:
+Verify the monitoring namespace:
 
 ```bash
 oc get pods -n openshift-user-workload-monitoring
 ```
 
-### 2. Deploy monitoring rules
+### 2. Apply the alert rules
 
 ```bash
 oc apply -f manifests/prometheus-rules/openshift-workload-alerts.yaml
 ```
 
-If you add a custom application, expose its metrics and create a matching `ServiceMonitor` or `PodMonitor` under `manifests/`.
+Verify the rule resource:
 
-### 3. Validate the repository locally
+```bash
+oc get prometheusrules
+```
+
+> Resource names, namespaces, and metric availability can vary by OpenShift version and cluster configuration. Validate the manifests in the target lab before using them operationally.
+
+### 3. Optional retention configuration
+
+`cluster-config/retention-config.yaml` is intentionally separate because storage requirements and available StorageClasses vary between clusters. Review and adapt the storage request before applying it.
+
+### 4. Validate locally
 
 ```bash
 python -m pip install -r requirements-dev.txt
-pytest -q
+python -m pytest -q
 ```
 
-GitHub Actions runs the same tests and parses all YAML manifests automatically.
+GitHub Actions performs the same tests, compiles Python files, and parses YAML manifests for every push and pull request.
 
 ## Alert catalogue
 
-| Alert | Severity | Condition | Runbook |
+| Alert | Severity | Signal | Runbook |
 |---|---|---|---|
-| `WorkloadHighCPU` | warning | Sustained pod CPU > 0.8 cores | [high CPU](docs/runbooks/high-cpu.md) |
-| `WorkloadHighMemory` | warning | Sustained pod memory > 1 GiB | [high memory](docs/runbooks/high-memory.md) |
-| `PodCrashLooping` | critical | ≥3 restarts in 15 minutes | [crashloop](docs/runbooks/pod-crashloop.md) |
-| `PodNotReady` | warning | Pod not ready for 10 minutes | [not ready](docs/runbooks/pod-not-ready.md) |
-| `NodeMemoryPressure` | critical | Sustained node memory pressure | [node issues](docs/runbooks/node-issues.md) |
-| `NodeDiskPressure` | critical | Sustained node disk pressure | [node issues](docs/runbooks/node-issues.md) |
+| `WorkloadHighCPU` | Warning | Sustained pod CPU above threshold | [High CPU](docs/runbooks/high-cpu.md) |
+| `WorkloadHighMemory` | Warning | Sustained pod memory above threshold | [High Memory](docs/runbooks/high-memory.md) |
+| `PodCrashLooping` | Critical | Repeated container restarts | [CrashLoop](docs/runbooks/pod-crashloop.md) |
+| `PodNotReady` | Warning | Pod remains not ready | [Pod Not Ready](docs/runbooks/pod-not-ready.md) |
+| `NodeMemoryPressure` | Critical | Node reports memory pressure | [Node Issues](docs/runbooks/node-issues.md) |
+| `NodeDiskPressure` | Critical | Node reports disk pressure | [Node Issues](docs/runbooks/node-issues.md) |
 
-Metric availability can vary by OpenShift version and monitoring-stack configuration. Validate each expression in the target cluster before treating it as a production alert.
+Each alert has a severity, actionable annotations, and a corresponding troubleshooting runbook.
 
 ## Incident investigation example
 
-### Scenario: application pod starts crashing
+### Scenario: a workload starts crashing
 
-**Problem:** users report degraded application behavior.
+**1. Detect** — Prometheus observes repeated container restarts.
 
-**Monitoring:** Prometheus detects repeated container restarts.
+**2. Alert** — `PodCrashLooping` fires after the configured threshold.
 
-**Alert:** `PodCrashLooping` fires after the configured threshold.
-
-**Investigation:**
+**3. Investigate** — correlate pod state, events, and previous container logs:
 
 ```bash
 oc get pod <pod> -n <namespace>
@@ -128,29 +146,48 @@ oc logs <pod> -n <namespace> --previous
 oc get events -n <namespace> --sort-by=.lastTimestamp
 ```
 
-**Resolution:** identify and correct the failing configuration, dependency, probe, image, or resource constraint.
+**4. Resolve** — correct the failed configuration, dependency, probe, image, or resource constraint.
 
-**Verification:** confirm the pod remains Ready, restart counts stop increasing, and the alert clears.
+**5. Verify** — confirm the pod becomes Ready, restart counts stabilize, and the alert clears.
 
-The same pattern is documented for CPU, memory, readiness, and node-pressure incidents in [`docs/runbooks/`](docs/runbooks/).
+The same approach is documented for CPU, memory, readiness, and node-pressure incidents in [`docs/runbooks/`](docs/runbooks/).
 
-## RBAC notes
+## Testing and CI
 
-Prefer least-privilege access for monitoring operators. Grant only the permissions required for the namespace and monitoring resources being managed. Avoid documenting commands with missing subjects or namespaces; always specify the target user/service account and namespace explicitly.
+The repository uses lightweight automated validation to catch configuration mistakes before changes are merged:
 
-## Evidence
+- PrometheusRule structure and expected alert names
+- Alert severity and runbook references
+- YAML parsing across cluster and application manifests
+- Python syntax compilation
+- Automated execution through GitHub Actions
 
-The repository intentionally does **not** include fabricated screenshots. Capture real evidence from your OpenShift lab and add it to [`docs/screenshots/`](docs/screenshots/). Recommended evidence includes a monitoring dashboard, a fired alert, an incident investigation, node health, and a successful CI run.
+## Evidence and screenshots
+
+Real cluster evidence will be added after the manifests are exercised in the OpenShift lab. The repository intentionally contains **no fabricated screenshots**.
+
+Recommended evidence:
+
+1. OpenShift monitoring/workload dashboard
+2. Fired alert
+3. Pod or node investigation using `oc`
+4. Resolution and recovery state
+5. Passing GitHub Actions run
+
+See [`docs/screenshots/README.md`](docs/screenshots/README.md) for the evidence checklist.
 
 ## Engineering practices
 
-- Keep manifests declarative and reviewable.
-- Give every alert a severity, actionable description, and runbook.
-- Test configuration changes before merging.
-- Use GitHub Actions as a merge-quality gate.
-- Correlate metrics with events and logs before remediation.
-- Verify recovery after every incident.
+- Keep Kubernetes/OpenShift configuration declarative and reviewable.
+- Give alerts clear severity, descriptions, and runbooks.
+- Validate configuration before merging.
+- Correlate metrics with logs and events during incidents.
+- Follow least-privilege principles for monitoring access.
+- Verify recovery after remediation.
+- Keep production claims separate from lab evidence.
 
-## Project outcome
+## Project status
 
-This project demonstrates an end-to-end **OpenShift observability and incident-response workflow**, combining Kubernetes/OpenShift operations, Prometheus alerting, Linux-style troubleshooting, automation, testing, and CI/CD.
+**Current:** monitoring configuration, alert rules, runbooks, documentation, tests, and CI are implemented.
+
+**Next:** exercise the manifests against the actual OpenShift lab, capture real evidence, and document the observed results.
