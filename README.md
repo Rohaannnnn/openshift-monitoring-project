@@ -40,30 +40,73 @@ flowchart LR
 
 Detailed architecture is documented in [`docs/architecture.md`](docs/architecture.md).
 
-## Repository structure
+## Repository Structure
+
+The repository is organized by responsibility so that each part of the project has a clear purpose.
+
+### ⚙️ OpenShift Configuration
+
+| Directory / File | Purpose |
+|---|---|
+| `cluster-config/` | OpenShift monitoring configuration |
+| `cluster-config/user-workload-monitoring.yaml` | Enables User Workload Monitoring |
+| `cluster-config/retention-config.yaml` | Optional metrics retention and storage configuration |
+
+### 📊 Monitoring & Alerting
+
+| Directory | Purpose |
+|---|---|
+| `manifests/service-monitors/` | ServiceMonitor definitions for application metrics |
+| `manifests/pod-monitors/` | PodMonitor definitions for direct pod monitoring |
+| `manifests/prometheus-rules/` | Prometheus alerting and recording rules |
+| `dashboards/grafana-dashboards/` | Grafana dashboard definitions |
+
+### 🚨 Incident Response & Documentation
+
+| Directory / File | Purpose |
+|---|---|
+| `docs/architecture.md` | Monitoring architecture and component flow |
+| `docs/troubleshooting.md` | Standard incident investigation workflow |
+| `docs/runbooks/` | Alert-specific troubleshooting procedures |
+| `docs/screenshots/` | Real OpenShift evidence captured from the lab |
+
+### 🧪 Testing & Automation
+
+| Directory / File | Purpose |
+|---|---|
+| `tests/` | Automated validation for monitoring configuration |
+| `scripts/` | Linux system monitoring and diagnostic helpers |
+| `.github/workflows/ci.yml` | Automated testing and YAML validation |
+| `requirements-dev.txt` | Python development/test dependencies |
+
+### 📝 Project Utilities
+
+| File / Directory | Purpose |
+|---|---|
+| `main.py` | Local system resource observation helper |
+| `logs/` | Existing lab log data and diagnostic output |
+
+### Repository at a glance
 
 ```text
-.
-├── .github/workflows/
-│   └── ci.yml                         # Automated tests and YAML validation
-├── cluster-config/
-│   ├── user-workload-monitoring.yaml  # Enables User Workload Monitoring
-│   └── retention-config.yaml           # Optional retention/storage settings
-├── manifests/
-│   ├── pod-monitors/                  # PodMonitor examples
-│   ├── prometheus-rules/              # Prometheus alerting rules
-│   └── service-monitors/              # ServiceMonitor examples
-├── docs/
-│   ├── architecture.md                # Monitoring architecture
-│   ├── troubleshooting.md             # Investigation workflow
-│   ├── runbooks/                      # Alert-specific runbooks
-│   └── screenshots/                    # Real OpenShift evidence
-├── tests/
-│   └── test_alert_rules.py            # Automated alert validation
-├── scripts/                           # Linux monitoring helpers
-├── logs/                              # Existing lab log data
-├── main.py                            # Local resource observation helper
-└── requirements-dev.txt               # Test dependencies
+openshift-monitoring-project/
+│
+├── .github/workflows/          # CI automation
+├── cluster-config/             # OpenShift monitoring configuration
+├── manifests/                  # Monitoring resources and alert rules
+│   ├── pod-monitors/
+│   ├── prometheus-rules/
+│   └── service-monitors/
+├── dashboards/                 # Grafana dashboards
+├── docs/                       # Architecture, troubleshooting and runbooks
+│   ├── runbooks/
+│   └── screenshots/
+├── scripts/                    # Linux monitoring helpers
+├── tests/                      # Automated tests
+├── logs/                       # Lab diagnostic data
+├── main.py                     # Local monitoring utility
+├── requirements-dev.txt        # Test dependencies
+└── README.md                   # Project documentation
 ```
 
 ## Quick start
