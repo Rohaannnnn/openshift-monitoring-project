@@ -1,16 +1,34 @@
 # Python
 __pycache__/
 *.py[cod]
-.venv/
-venv/
+*.pyo
 
-# Environment
-.env
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
 
 # IDE
 .vscode/
 .idea/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Local environment
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.swp
