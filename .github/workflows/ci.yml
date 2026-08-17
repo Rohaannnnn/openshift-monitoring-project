@@ -4,8 +4,12 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
+    name: Test and validate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,19 +22,26 @@ jobs:
           cache: pip
 
       - name: Install test dependencies
-        run: pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Run automated tests
-        run: pytest -q
+        run: python -m pytest -q
+
+      - name: Compile Python files
+        run: python -m compileall -q .
 
       - name: Validate YAML manifests
         run: |
           python - <<'PY'
           from pathlib import Path
           import yaml
-          for path in Path("cluster-config").rglob("*.yaml"):
-              yaml.safe_load(path.read_text())
-          for path in Path("manifests").rglob("*.yaml"):
-              yaml.safe_load(path.read_text())
-          print("All YAML manifests parsed successfully")
+
+          paths = list(Path("cluster-config").rglob("*.yaml"))
+          paths += list(Path("manifests").rglob("*.yaml"))
+
+          for path in paths:
+              with path.open(encoding="utf-8") as handle:
+                  yaml.safe_load(handle)
+
+          print(f"Validated {len(paths)} YAML manifest(s)")
           PY
